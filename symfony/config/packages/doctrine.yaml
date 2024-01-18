@@ -1,16 +1,6 @@
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
-        # driver: 'pdo_mysql'
-        # host: 'backend_mysql'
-        # port: 3306
-        # dbname: 'symfony_db'
-        # user: 'root'
-        # password: 'root'
-        # charset: utf8mb4
-        # default_table_options:
-        #     charset: utf8mb4
-        #     collate: utf8mb4_unicode_ci
 
         profiling_collect_backtrace: '%kernel.debug%'
     orm:
