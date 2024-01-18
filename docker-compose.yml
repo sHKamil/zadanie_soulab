@@ -1,0 +1,51 @@
+version: '3'
+
+services:
+    backend-web:
+        image: nginx:latest
+        ports:
+          - "8070:80"
+        volumes:
+          - ./nginx/conf.d/:/etc/nginx/conf.d/
+          - ./symfony/:/var/www/html/
+        depends_on:
+          - backend_mysql
+        networks:
+          - symfony
+    backend-app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        volumes:
+            - ./symfony/:/var/www/html/
+        networks:
+            - symfony
+        depends_on:
+            - backend_mysql
+    backend_mysql:
+        image: mysql
+        command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci','--default-authentication-plugin=mysql_native_password']
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: symfony_db
+        volumes:
+            - backend_mysql:/var/lib/mysql
+        networks:
+            - symfony
+    frontend:
+        build:
+            context: .
+            dockerfile: Dockerfile-frontend
+        command: npm run dev
+        volumes:
+            - ./vue/:/usr/src/app
+        ports:
+            - "8080:8080"
+        networks:
+            - symfony
+        depends_on:
+            - backend-app
+volumes:
+    backend_mysql:
+networks:
+    symfony:
