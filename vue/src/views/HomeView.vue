@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import axios from 'axios';
-import { computed, ref} from 'vue'
+import { computed, reactive, ref, watchEffect } from 'vue'
 import MessagesTable from '../components/MessagesTable.vue'
+import { useMouse, useElementBounding } from '@vueuse/core'
 
 type MessageType = {
     id: number,
@@ -17,6 +18,7 @@ type ValidatorResult = {
 }
 
 const backend_domain: string = 'http://localhost:8070';
+const messages_data = ref<MessageType[]>([]);
 const name = ref();
 const last_name = ref();
 const email = ref();
@@ -35,6 +37,7 @@ const message_error = computed(() => {
   return validateTextInput(message.value);
 });
 
+// If ValidateForm returns true send form data to backend entrypoint
 const addMessage = async () => {
   if(validateForm()) {
     axios.post(backend_domain + '/api/message', {
@@ -54,8 +57,13 @@ const addMessage = async () => {
   }
 }
 
+// Validate form after click and set value of inputs to empty string if they are undefined
 const validateForm = (): boolean => {
   if(name_error.value.is_valid === true && last_name_error.value.is_valid === true && email_error.value.is_valid === true && message_error.value.is_valid === true) return true;
+  if(name_error.value.is_valid === "NotValidatedYet") name.value = '';
+  if(last_name_error.value.is_valid === "NotValidatedYet") last_name.value = '';
+  if(email_error.value.is_valid === "NotValidatedYet") email.value = '';
+  if(message_error.value.is_valid === "NotValidatedYet") message.value = '';
   return false;
 }
 
@@ -82,6 +90,7 @@ const validateTextInput = (text: string) => {
   return {is_valid: true} as ValidatorResult;
 }
 
+// Set inputs to initial value
 const clearFields = () => {
   name.value = undefined;
   last_name.value = undefined;
@@ -89,9 +98,7 @@ const clearFields = () => {
   message.value = undefined;
 }
 
-const data_ready = ref(false);
-const messages_data = ref<MessageType[]>([]);
-
+// Get data for table from backend endpoint
 const getMessagesForTable = async () => {
   let messages: MessageType[] = [];
 
@@ -101,70 +108,129 @@ const getMessagesForTable = async () => {
         });
 
   messages_data.value = messages;
-  data_ready.value = true;
 }
 getMessagesForTable();
 
+// Styling form glow
+const glow_form = ref(null);
+const rect = reactive(useElementBounding(glow_form));
+const { x, y } = useMouse();
+const mouse_x = ref('');
+const mouse_y = ref('');
+watchEffect(() =>{mouse_x.value = x.value - rect.left- window.scrollX + "px"});
+watchEffect(() =>{mouse_y.value = y.value - rect.top - window.scrollY + "px"});
 </script>
 
 <template>
+
   <div class="container">
-    <form @submit.prevent="addMessage">
-      <ul>
-        <li><input type="text" v-model="name" placeholder="Imię"  /></li>
-        <li><span class="error-message">{{ name_error.message }}</span></li>
-      </ul>
-      <ul>
-        <li><input type="text" v-model="last_name" placeholder="Nazwisko"  /></li>
-        <li><span class="error-message">{{ last_name_error.message }}</span></li>
-      </ul>
-      <ul>
-        <li><input type="text" v-model="email" placeholder="E-mail"  /></li>
-        <li><span class="error-message">{{ email_error.message }}</span></li>
-      </ul>
-      <ul>
-        <li><textarea v-model="message" placeholder="Wiadomość"></textarea></li>
-        <li><span class="error-message">{{ message_error.message }}</span></li>
-      </ul>
-      <ul>
-        <input type="submit" value="Dodaj">
-      </ul>
+    <form ref="glow_form" @submit.prevent="addMessage">
+      <div class="inner-content">
+        <ul>
+          <li><input :class="{'wrong-input': name_error.is_valid === false}" type="text" v-model="name" placeholder="Imię"  /></li>
+          <li><span class="error-message">{{ name_error.message }}</span></li>
+          <li><input :class="{'wrong-input': last_name_error.is_valid === false}" type="text" v-model="last_name" placeholder="Nazwisko"  /></li>
+          <li><span class="error-message">{{ last_name_error.message }}</span></li>
+          <li><input :class="{'wrong-input': email_error.is_valid === false}" type="text" v-model="email" placeholder="E-mail"  /></li>
+          <li><span class="error-message">{{ email_error.message }}</span></li>
+          <li><textarea :class="{'wrong-input': message_error.is_valid === false}" v-model="message" placeholder="Wiadomość"></textarea></li>
+          <li><span class="error-message">{{ message_error.message }}</span></li>
+          <input type="submit" value="Dodaj">
+        </ul>
+      </div>
     </form>
-      <MessagesTable @messageDeleted="getMessagesForTable" :msg="messages_data" :backend_domain="backend_domain"/>
+      <MessagesTable v-if="messages_data.length>0" @messageDeleted="getMessagesForTable" :msg="messages_data" :backend_domain="backend_domain"/>
   </div>
 </template>
 <style scoped>
 .container {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  width: 100%;
 }
 form {
+  background-color: var(--vt-c-dark-soft);
+  border-radius: 1rem;
+  width: 40%;
+  margin: 5rem auto;
   display: flex;
-  flex-direction: column;
-  gap: .5rem;
-  padding: 3.5rem;
-  background-color: rgb(17, 17, 17);
-  box-shadow: 0px 0px 45px -16px rgb(117, 134, 116);
+  align-items: center;
+  justify-content: center;
+  min-width: fit-content;
+  background: radial-gradient(
+    800px circle at v-bind(mouse_x) v-bind(mouse_y), 
+    var(--vt-c-dark-light),
+    transparent 60%
+  );
+}
+form > .inner-content {
+  border-radius: 1rem;
+  width: calc(100% - 2px);
+  height: calc(100% - 2px);
+  margin: 1px;
+  border: 1px solid var(--vt-c-dark-soft-transparent);
+  background-color: var(--vt-c-dark-transparent);
+}
+ul {
+  list-style: none;
+  margin: 0 auto;
+  padding: 2.5rem 0rem;
+  width: fit-content;
+}
+ul>li:first-child>input{
+  border-top-right-radius: .5rem;
+  border-top-left-radius: .5rem;
+}
+li {
+  width: 100%;
+  min-height: 1.5rem;
 }
 input {
+  background-color: var(--vt-c-dark);
+  border: 1px solid var(--vt-c-dark-soft);
+  color: white;
   padding: .8rem;
   font-size: 1.3rem;
+  width: 100%;
+  min-width: 15rem;
   outline: none;
-  border: none;
   transition: all .2s ease;
 }
 input:focus {
   border-radius: .5rem;
+  border: 1px solid var(--vt-c-dark-light-transparent);
+}
+textarea {
+  background-color: var(--vt-c-dark);
+  border: 1px solid var(--vt-c-dark-soft);
+  padding: .8rem;
+  color: white;
+  width: 100%;
+  min-width: 15rem;
+  min-height: 7rem;
+  outline: none;
+  resize: none;
+  transition: all .2s ease;
+}
+textarea:focus {
+  border-radius: .5rem;
+  border: 1px solid var(--vt-c-dark-light-transparent);
 }
 input[type="submit"]{
+  background-color: var(--vt-c-dark-light-transparent);
+  color: var(--vt-c-dark);
+  margin-top: .5rem;
   cursor: pointer;
+  transition: all .3s ease;
+  font-weight: bold;
+  border-bottom-left-radius: .5rem;
+  border-bottom-right-radius: .5rem;
 }
-ul {
-  list-style: none;
-  padding: 0;
+input[type="submit"]:hover{
+  background-color: var(--vt-c-dark-light);
 }
-li {
-  min-height: 1.5rem;
+.wrong-input {
+  border:1px solid var(--vt-c-dark-danger);
+}
+.error-message {
+  color: var(--vt-c-dark-danger-soft);
 }
 </style>
