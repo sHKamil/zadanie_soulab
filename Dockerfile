@@ -15,4 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     
 RUN curl -sS https://getcomposer.org/installer | php && mv composer.phar /usr/local/bin/composer
 COPY symfony/ /var/www/html
+COPY php/entrypoint.sh /entrypoint.sh
+CMD ["php-fpm"]
+ENTRYPOINT ["sh", "/entrypoint.sh"]
 WORKDIR /var/www/html/
