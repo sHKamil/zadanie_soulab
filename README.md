@@ -9,8 +9,20 @@ Vue packages:
  - axios
  - vueuse
 
+## Wersja online
+https://zadanie-soulab-kh.duckdns.org/
+
 ## Uruchamianie
- Wymagany zainstalowany Docker.\
+ Wymagany zainstalowany Docker, Composer oraz npm.
+ 1. W folderze ./symfony/ należy uruchomić komendę
+```sh
+composer install
+```
+ 2. Następnie w folderze ./vue/ uruchomic komendę 
+```sh
+npm install
+```
+ 3. W głównym folderze z projektem należy uruchomić frontend wraz z backenden za pomocą komendy:
 ```sh
 docker compose up --build -d
 ```

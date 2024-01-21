@@ -19,3 +19,4 @@ COPY php/entrypoint.sh /entrypoint.sh
 CMD ["php-fpm"]
 ENTRYPOINT ["sh", "/entrypoint.sh"]
 WORKDIR /var/www/html/
+RUN composer install
